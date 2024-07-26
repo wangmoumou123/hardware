@@ -9,7 +9,7 @@ type Command struct {
 }
 
 func getStatusOutput(command string, args ...string) (int, string) {
-	cmd := exec.Command(command, args...)
+	cmd := exec.Command("sh", "-c", command)
 
 	output, err := cmd.CombinedOutput()
 

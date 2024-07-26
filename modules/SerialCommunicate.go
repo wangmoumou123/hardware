@@ -35,7 +35,7 @@ func (ser *SerialCommunicate) openSerial() {
 	ser.Ser = port
 }
 
-func SerialCommunicateInit(nameOrPort string, baud int) *SerialCommunicate {
+func SerialCommunicateInit(nameOrPort string, num, baud int) *SerialCommunicate {
 	_portFlag := []string{"COM", "/dev/tty"}
 	mode := false
 	for _, f := range _portFlag {
@@ -50,7 +50,7 @@ func SerialCommunicateInit(nameOrPort string, baud int) *SerialCommunicate {
 		ser = &SerialCommunicate{Port: nameOrPort, Baud: baud}
 	} else {
 		if IsLinux() {
-			ser = &SerialCommunicate{Port: ser.FindPort(nameOrPort)}
+			ser = &SerialCommunicate{Port: ser.FindPort(nameOrPort, num),Baud: baud}
 		} else {
 			panic(any("标识符模式目前仅支持LINUX!"))
 		}
@@ -146,35 +146,11 @@ func IsLinux() bool {
 	}
 }
 
-/**
-@staticmethod
-   def get_ser_port(name, num=0):
-       try:
-           latest_ttyUSB = ""
-           _, dmesg_output = getstatusoutput("dmesg | grep ttyUSB*")
-           lines = dmesg_output.split('\n')
-           t_n = 0
-           for i in range(0, len(lines)):
-               line = lines[i]
-               if name in line and 'attached' in line:
-                   if t_n <= num:
-                       t_n += 1
-                       latest_ttyUSB = line.split('ttyUSB')[1].split()[0]
-                       continue
-               elif name in line and "disconnected" in line and "tty" in line:
-                   t_n = 0
-           if latest_ttyUSB == "":
-               return None
-           return "ttyUSB" + latest_ttyUSB
-       except Exception as e:
-           print(e)
-           return None
-*/
-
-func (ser *SerialCommunicate) FindPort(name string) string {
+func (ser *SerialCommunicate) FindPort(name string, num int) string {
 	defer func() {
 		if e := recover(); e != any(nil) {
 			log.Fatal(e)
+			return
 		}
 	}()
 	var ttyUSb string
@@ -182,7 +158,24 @@ func (ser *SerialCommunicate) FindPort(name string) string {
 	if status != 0 {
 		panic(any("该操作系统不支持"))
 	}
-	log.Println(ttyUSb, output)
-	//
-	return ""
+	var tN int
+	for _, line := range strings.Split(output, "\n") {
+		if strings.Contains(line, name) && strings.Contains(line, "attached") {
+			if tN <= num {
+				tN++
+				ttyUSb = strings.TrimSpace(strings.Split(line, "ttyUSB")[1])
+				continue
+			}
+		} else if strings.Contains(line, name) &&
+			strings.Contains(line, "disconnected") &&
+			strings.Contains(line, "tty") {
+			tN = 0
+		}
+	}
+	if ttyUSb == "" {
+		return ""
+	}
+	log.Println("/dev/ttyUSB"+ttyUSb)
+	return "/dev/ttyUSB" + ttyUSb
+
 }
