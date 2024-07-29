@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"errors"
 	"os/exec"
 	"strings"
 )
@@ -15,10 +16,9 @@ func getStatusOutput(command string, args ...string) (int, string) {
 
 	var statusCode int
 	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
 			statusCode = exitError.ExitCode()
-		} else {
-			statusCode = -1
 		}
 	} else {
 		statusCode = 0

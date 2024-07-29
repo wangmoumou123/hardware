@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"hardware/modules"
 	"log"
 	"strings"
 )
@@ -56,5 +55,17 @@ func main() {
 	//	ser.Close()
 	//})
 	//wg.Wait()
-	modules.Tt()
+
+	//pin := modules.GpioInit(4, "OUT")
+	//
+	//for {
+	//	time.Sleep(time.Second)
+	//	pin.Write(1) // Set pin High
+	//	time.Sleep(time.Second)
+	//	pin.Write(0) // Set pin Low
+	//}
+
+	//u := modules.UdpInit("127.0.0.1", 9900)
+	//u.Send("dasda")
+
 }

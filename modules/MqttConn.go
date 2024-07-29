@@ -24,7 +24,7 @@ type MqttConn struct {
 	MsgCallBack func(msg, tp string)
 }
 
-func (mq MqttConn) MsgHandle(client MQTT.Client, message MQTT.Message) {
+func (mq *MqttConn) MsgHandle(client MQTT.Client, message MQTT.Message) {
 	msg := string(message.Payload())
 	tp := message.Topic()
 	//log.Println(msg, "======", tp)
@@ -33,14 +33,14 @@ func (mq MqttConn) MsgHandle(client MQTT.Client, message MQTT.Message) {
 	}
 }
 
-func (mq MqttConn) OnConnectHandle(client MQTT.Client) {
+func (mq *MqttConn) OnConnectHandle(client MQTT.Client) {
 	for _, tp := range mq.Topic {
 		client.Subscribe(tp, 1, nil)
 		log.Println("subject===>", tp)
 	}
 }
 
-func (mq MqttConn) DisConnectHandle(client MQTT.Client, err error) {
+func (mq *MqttConn) DisConnectHandle(client MQTT.Client, err error) {
 	log.Println("==disconnected====")
 }
 
