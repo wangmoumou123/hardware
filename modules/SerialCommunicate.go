@@ -50,7 +50,7 @@ func SerialCommunicateInit(nameOrPort string, num, baud int) *SerialCommunicate 
 		ser = &SerialCommunicate{Port: nameOrPort, Baud: baud}
 	} else {
 		if IsLinux() {
-			ser = &SerialCommunicate{Port: ser.FindPort(nameOrPort, num),Baud: baud}
+			ser = &SerialCommunicate{Port: ser.FindPort(nameOrPort, num), Baud: baud}
 		} else {
 			panic(any("标识符模式目前仅支持LINUX!"))
 		}
@@ -175,7 +175,7 @@ func (ser *SerialCommunicate) FindPort(name string, num int) string {
 	if ttyUSb == "" {
 		return ""
 	}
-	log.Println("/dev/ttyUSB"+ttyUSb)
+	log.Println("/dev/ttyUSB" + ttyUSb)
 	return "/dev/ttyUSB" + ttyUSb
 
 }

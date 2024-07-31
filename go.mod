@@ -4,7 +4,6 @@ go 1.20
 
 require (
 	github.com/eclipse/paho.mqtt.golang v1.4.3
-	github.com/stianeikeland/go-rpio v4.2.0+incompatible
 	github.com/stianeikeland/go-rpio/v4 v4.6.0
 	github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56

@@ -29,3 +29,15 @@ func ExitHandle(callback ExitCallBack) chan struct{} {
 	}()
 	return done
 }
+
+// bytesToHexString 将字节数组转换为带空格分隔的十六进制字符串
+func BytesToHexString(data []byte) string {
+	hexString := ""
+	for i, b := range data {
+		if i > 0 {
+			hexString += " "
+		}
+		hexString += fmt.Sprintf("%02X", b)
+	}
+	return hexString
+}
