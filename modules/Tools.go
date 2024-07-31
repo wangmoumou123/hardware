@@ -1,26 +1,21 @@
 package modules
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 )
 
 type ExitCallBack func()
 
-// ExitHandle exit handle 设置信号处理和清理工作
 func ExitHandle(callback ExitCallBack) chan struct{} {
-	// 创建一个通道，用于接收操作系统信号
 	sigChan := make(chan os.Signal, 1)
-
-	// 将指定的信号转发到 sigChan
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	// 创建一个通道用于通知外部代码程序退出
 	done := make(chan struct{})
-
-	// 使用 defer 注册清理函数
 	go func() {
 		defer callback()
 		sig := <-sigChan
@@ -30,7 +25,6 @@ func ExitHandle(callback ExitCallBack) chan struct{} {
 	return done
 }
 
-// bytesToHexString 将字节数组转换为带空格分隔的十六进制字符串
 func BytesToHexString(data []byte) string {
 	hexString := ""
 	for i, b := range data {
@@ -40,4 +34,23 @@ func BytesToHexString(data []byte) string {
 		hexString += fmt.Sprintf("%02X", b)
 	}
 	return hexString
+}
+
+func HexStringToBytes(hexString string) ([]byte, error) {
+	hexString = strings.ReplaceAll(hexString, " ", "")
+	if len(hexString)%2 != 0 {
+		return nil, errors.New("invalid hex string length")
+	}
+	bytes := make([]byte, len(hexString)/2)
+
+	for i := 0; i < len(hexString); i += 2 {
+		hexPair := hexString[i : i+2]
+		b, err := strconv.ParseUint(hexPair, 16, 8)
+		if err != nil {
+			return nil, err
+		}
+		bytes[i/2] = byte(b)
+	}
+
+	return bytes, nil
 }

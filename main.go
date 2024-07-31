@@ -10,7 +10,7 @@ import (
 var FLAGS = []string{"at", "+", "@gps", "@batt"}
 
 func callback(m []byte) {
-	log.Println("hex_ callback===>", m)
+	log.Println("hex_ callback===>", modules.BytesToHexString(m), "===", len(m))
 
 	//msg := string(m)
 	//for _, f := range FLAGS {
@@ -34,9 +34,9 @@ func msgCallback(msg string, tp string) {
 
 func main() {
 	var wg sync.WaitGroup
-	ser := modules.SerialCommunicateInit("COM128", 0, 115200)
+	ser := modules.SerialCommunicateInit("COM5", 0, 115200)
 	//ser := modules.SerialCommunicateInit("FTDI", 2, 115200)
-	ser.ReadCallback(callback, &wg)
+	ser.ReadCallback(callback, &wg, "5a")
 	//time.Sleep(time.Second)
 	//log.Println("===start send===")
 	wg.Add(1)
@@ -49,7 +49,9 @@ func main() {
 			//log.Println(modules.BytesToHexString(query))
 			//ser.SendHex(query)
 			ser.Send("at")
-			time.Sleep(time.Second * 2)
+			//read := ser.Read(1024)
+			//log.Println(string(read))
+			time.Sleep(time.Second)
 		}
 	}()
 	//topics := []string{"ws"}

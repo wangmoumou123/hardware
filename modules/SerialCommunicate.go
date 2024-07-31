@@ -2,11 +2,14 @@ package modules
 
 import (
 	"bufio"
+	"bytes"
+	"errors"
 	"fmt"
 	"github.com/tarm/serial"
 	"io"
 	"log"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -25,8 +28,8 @@ type SerialCommunicate struct {
 }
 
 func (ser *SerialCommunicate) openSerial() {
-	config := &serial.Config{Name: ser.Port, Baud: ser.Baud, ReadTimeout: ser.ReadTimeout, Size: ser.Size,
-		Parity: ser.Parity, StopBits: ser.StopBits}
+	config := &serial.Config{Name: ser.Port, Baud: ser.Baud, ReadTimeout: ser.ReadTimeout, Size: serial.DefaultSize,
+		Parity: ser.Parity, StopBits: serial.Stop1}
 	port, err := serial.OpenPort(config)
 	if err != nil {
 		log.Fatal(err)
@@ -47,7 +50,7 @@ func SerialCommunicateInit(nameOrPort string, num, baud int) *SerialCommunicate 
 
 	var ser *SerialCommunicate
 	if mode {
-		ser = &SerialCommunicate{Port: nameOrPort, Baud: baud}
+		ser = &SerialCommunicate{Port: nameOrPort, Baud: baud, ReadTimeout: 0}
 	} else {
 		if IsLinux() {
 			ser = &SerialCommunicate{Port: ser.FindPort(nameOrPort, num), Baud: baud}
@@ -91,14 +94,79 @@ func (ser *SerialCommunicate) Read(length ...int) []byte {
 	return buf[:n]
 }
 
-func (ser *SerialCommunicate) ReadCallback(callback Callback, wg *sync.WaitGroup) {
+func scanBytes(startBytes []byte) bufio.SplitFunc {
+	//log.Println("startBytes", startBytes)
+	return func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		//log.Println("startBytes", startBytes)
+		//log.Println(bytesToHexString(data))
+		if len(startBytes) == 0 {
+			startBytes = data[0:2]
+		}
+		if atEOF && len(data) == 0 {
+			return 0, nil, nil
+		}
+		if i := bytes.Index(data, startBytes); i >= 0 && len(data) > 1 {
+			return i + len(startBytes), dropCR(data[i:]), nil
+		}
+		if atEOF {
+			return len(data), dropCR(data), nil
+		}
+		return 0, nil, nil
+	}
+}
 
-	// 创建一个缓冲读取器
-	// 设置分割函数为按行读取
-	// 读取并打印每一行
+func dropCR(data []byte) []byte {
+	if len(data) > 0 && data[len(data)-1] == '\r' {
+		return data[0 : len(data)-1]
+	}
+	return data
+}
+func bytesToHexString(data []byte) string {
+	hexString := ""
+	for i, b := range data {
+		if i > 0 {
+			hexString += " "
+		}
+		hexString += fmt.Sprintf("%02X", b)
+	}
+	return hexString
+}
+
+func hexStringToBytes(hexString string) ([]byte, error) {
+	hexString = strings.ReplaceAll(hexString, " ", "")
+	if len(hexString)%2 != 0 {
+		return nil, errors.New("invalid hex string length")
+	}
+	bs := make([]byte, len(hexString)/2)
+	for i := 0; i < len(hexString); i += 2 {
+		hexPair := hexString[i : i+2]
+		b, err := strconv.ParseUint(hexPair, 16, 8)
+		if err != nil {
+			return nil, err
+		}
+		bs[i/2] = byte(b)
+	}
+	return bs, nil
+}
+
+func (ser *SerialCommunicate) ReadCallback(callback Callback, wg *sync.WaitGroup, hexStarts ...string) {
+	var hex bool
+	if len(hexStarts) == 0 {
+		hex = false
+	} else {
+		hex = true
+	}
 	reader := bufio.NewReader(ser.Ser)
 	scanner := bufio.NewScanner(reader)
-	scanner.Split(bufio.ScanLines)
+	if hex {
+		bs, err := hexStringToBytes(hexStarts[0])
+		if err != nil {
+			return
+		}
+		scanner.Split(scanBytes(bs))
+	} else {
+		scanner.Split(bufio.ScanLines)
+	}
 	wg.Add(1)
 	go func() {
 		defer func() {
@@ -113,7 +181,6 @@ func (ser *SerialCommunicate) ReadCallback(callback Callback, wg *sync.WaitGroup
 			}
 			callback(line)
 		}
-		// 检查是否有读取错误
 		if err := scanner.Err(); err != nil {
 			if err == io.EOF {
 				fmt.Println("read success")
