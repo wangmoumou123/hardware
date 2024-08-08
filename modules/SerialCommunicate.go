@@ -28,7 +28,7 @@ type SerialCommunicate struct {
 }
 
 func (ser *SerialCommunicate) openSerial() {
-	config := &serial.Config{Name: ser.Port, Baud: ser.Baud, ReadTimeout: ser.ReadTimeout, Size: serial.DefaultSize,
+	config := &serial.Config{Name: ser.Port, Baud: ser.Baud, ReadTimeout: 0, Size: serial.DefaultSize,
 		Parity: ser.Parity, StopBits: serial.Stop1}
 	port, err := serial.OpenPort(config)
 	if err != nil {
@@ -50,7 +50,7 @@ func SerialCommunicateInit(nameOrPort string, num, baud int) *SerialCommunicate 
 
 	var ser *SerialCommunicate
 	if mode {
-		ser = &SerialCommunicate{Port: nameOrPort, Baud: baud, ReadTimeout: 0}
+		ser = &SerialCommunicate{Port: nameOrPort, Baud: baud, ReadTimeout: time.Millisecond * 20}
 	} else {
 		if IsLinux() {
 			ser = &SerialCommunicate{Port: ser.FindPort(nameOrPort, num), Baud: baud}
@@ -94,11 +94,12 @@ func (ser *SerialCommunicate) Read(length ...int) []byte {
 	return buf[:n]
 }
 
-func scanBytes(startBytes []byte) bufio.SplitFunc {
+func scanBytes(startBytes []byte, timeOut time.Duration) bufio.SplitFunc {
 	//log.Println("startBytes", startBytes)
 	return func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		time.Sleep(timeOut)
 		//log.Println("startBytes", startBytes)
-		//log.Println(bytesToHexString(data))
+		log.Println("data=========>", bytesToHexString(data))
 		if len(startBytes) == 0 {
 			startBytes = data[0:2]
 		}
@@ -106,12 +107,13 @@ func scanBytes(startBytes []byte) bufio.SplitFunc {
 			return 0, nil, nil
 		}
 		if i := bytes.Index(data, startBytes); i >= 0 && len(data) > 1 {
-			return i + len(startBytes), dropCR(data[i:]), nil
+			return i + len(data), dropCR(data[i:]), nil
 		}
 		if atEOF {
 			return len(data), dropCR(data), nil
 		}
 		return 0, nil, nil
+
 	}
 }
 
@@ -160,10 +162,11 @@ func (ser *SerialCommunicate) ReadCallback(callback Callback, wg *sync.WaitGroup
 	scanner := bufio.NewScanner(reader)
 	if hex {
 		bs, err := hexStringToBytes(hexStarts[0])
+		log.Println(bs)
 		if err != nil {
 			return
 		}
-		scanner.Split(scanBytes(bs))
+		scanner.Split(scanBytes(bs, ser.ReadTimeout))
 	} else {
 		scanner.Split(bufio.ScanLines)
 	}
